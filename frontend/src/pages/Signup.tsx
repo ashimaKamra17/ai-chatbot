@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../context/SnackbarContext";
+import api from "../services/api";
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -24,19 +25,8 @@ const Signup: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:3002/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Signup failed");
-      }
+      const response = await api.post("/auth/signup", formData);
+      const data = response.data;
 
       // Store the token
       localStorage.setItem("token", data.token);
@@ -48,8 +38,8 @@ const Signup: React.FC = () => {
       // Redirect to chat page
       navigate("/chat");
     } catch (err: any) {
-      setError(err.message);
-      showSnackbar(err.message, "error");
+      setError(err.response?.data?.error || err.message);
+      showSnackbar(err.response?.data?.error || err.message, "error");
     }
   };
 

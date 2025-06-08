@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaRobot, FaBars, FaTimes, FaSync } from "react-icons/fa";
 import { useChat } from "../context/ChatContext";
 import { useSnackbar } from "../context/SnackbarContext";
@@ -22,6 +22,12 @@ const Sidebar: React.FC = () => {
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchMessageHistory();
+    }
+  }, [isOpen]);
 
   const handleRefresh = async () => {
     try {
@@ -65,7 +71,7 @@ const Sidebar: React.FC = () => {
       {/* Hamburger Button */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-gray-100 transition-colors"
+        className="fixed top-4 left-4 z-50 p-2 rounded-xl text-gray-600 dark:text-dark-text-secondary hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-dark-card transition-all duration-200"
       >
         {isOpen ? <FaTimesIcon size={24} /> : <FaBarsIcon size={24} />}
       </button>
@@ -73,32 +79,34 @@ const Sidebar: React.FC = () => {
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
           onClick={toggleSidebar}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-dark-bg backdrop-blur-md shadow-lg transform transition-all duration-300 ease-in-out z-50 border-r border-gray-100 dark:border-dark-border ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-white dark:bg-dark-bg">
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-bg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <span className="text-blue-600">
-                  <FaRobotIcon size={24} />
-                </span>
-                <h2 className="text-xl font-semibold text-gray-800">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-2 rounded-xl shadow-lg">
+                  <span className="text-white">
+                    <FaRobotIcon size={24} />
+                  </span>
+                </div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text">
                   Chat History
                 </h2>
               </div>
               <button
                 onClick={handleRefresh}
-                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 text-gray-600 dark:text-dark-text-secondary hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-dark-card rounded-xl transition-all duration-200"
                 title="Refresh history"
               >
                 <FaSyncIcon size={20} />
@@ -107,19 +115,19 @@ const Sidebar: React.FC = () => {
           </div>
 
           {/* Chat History */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-dark-bg">
             <div className="space-y-4">
               {chatSessions.map((session) => (
                 <div
                   key={session.id}
                   onClick={() => handleChatClick(session.id)}
-                  className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="p-3 rounded-xl bg-gray-50 dark:bg-dark-card hover:bg-gray-100 dark:hover:bg-dark-card transition-all duration-200 cursor-pointer border border-gray-100 dark:border-dark-border"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
                       {formatDate(session.createdAt)}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
                       {
                         session.messages.filter((msg) => msg.sender === "user")
                           .length
@@ -133,14 +141,14 @@ const Sidebar: React.FC = () => {
                       .slice(0, 2)
                       .map((msg) => (
                         <div key={msg.id} className="text-sm">
-                          <span className="text-gray-700 line-clamp-1">
+                          <span className="text-gray-700 dark:text-dark-text line-clamp-1">
                             {msg.content}
                           </span>
                         </div>
                       ))}
                     {session.messages.filter((msg) => msg.sender === "user")
                       .length > 2 && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-dark-text-secondary">
                         +
                         {session.messages.filter((msg) => msg.sender === "user")
                           .length - 2}{" "}
@@ -154,10 +162,10 @@ const Sidebar: React.FC = () => {
           </div>
 
           {/* Sidebar Footer */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-bg">
             <button
               onClick={handleClearHistory}
-              className="w-full py-2 px-4 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              className="w-full py-2 px-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200"
             >
               Clear History
             </button>

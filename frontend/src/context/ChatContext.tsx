@@ -5,9 +5,9 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
-import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, useParams } from "react-router-dom";
+import api from "../services/api";
 
 interface Message {
   id: string;
@@ -56,27 +56,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { chatId } = useParams();
 
   const fetchMessageHistory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-
-      const response = await axios.get(
-        "http://localhost:3002/api/chat/history",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      const response = await api.get("/chat/history");
       const sessions: ChatSession[] = response.data.map((session: any) => ({
         id: session._id,
         messages: session.messages.map((msg: any) => ({
@@ -91,8 +77,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       }));
 
       setChatSessions(sessions);
-      // Flatten all messages from all sessions for the main chat view
-      const allMessages = sessions.flatMap((session) => session.messages);
     } catch (err) {
       setError(
         err instanceof Error
@@ -105,68 +89,55 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const sendMessage = useCallback(
-    async (content: string) => {
-      if (!content.trim()) return;
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim()) return;
 
-      const requestId = uuidv4();
-      const userMessage: Message = {
+    const requestId = uuidv4();
+    const userMessage: Message = {
+      id: uuidv4(),
+      content,
+      sender: "user",
+      timestamp: new Date(),
+      requestId,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await api.post(
+        "/chat/message",
+        {
+          message: content,
+        },
+        {
+          headers: {
+            "X-Request-ID": requestId,
+          },
+        }
+      );
+
+      const botMessage: Message = {
         id: uuidv4(),
-        content,
-        sender: "user",
+        content: response.data.messages[1].content,
+        sender: "bot",
         timestamp: new Date(),
         requestId,
       };
 
-      setMessages((prev) => [...prev, userMessage]);
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-
-        const response = await axios.post(
-          "http://localhost:3002/api/chat/message",
-          {
-            message: content,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "X-Request-ID": requestId,
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const botMessage: Message = {
-          id: uuidv4(),
-          content: response.data.messages[1].content,
-          sender: "bot",
-          timestamp: new Date(),
-          requestId,
-        };
-
-        setMessages((prev) => [...prev, botMessage]);
-
-        // Refresh chat history after sending a message
-        await fetchMessageHistory();
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "An error occurred while sending the message"
-        );
-        console.error("Error sending message:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [fetchMessageHistory]
-  );
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An error occurred while sending the message"
+      );
+      console.error("Error sending message:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -176,24 +147,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   const loadChatById = useCallback(
     async (chatId: string) => {
+      console.log("loadChatById called with chatId:", chatId);
       setIsLoading(true);
       setError(null);
 
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-
-        const response = await axios.get(
-          `http://localhost:3002/api/chat/chat/${chatId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
+        const response = await api.get(`/chat/chat/${chatId}`);
         const chat = response.data;
         const formattedMessages = chat.messages.map((msg: any) => ({
           id: msg._id,
@@ -204,7 +163,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }));
 
         setMessages(formattedMessages);
-        navigate(`/chat/${chatId}`);
+        navigate(`/chat/c/${chatId}`);
       } catch (err) {
         setError(
           err instanceof Error
@@ -223,20 +182,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setMessages([]);
     navigate("/chat");
   }, [navigate]);
-
-  // Load chat when chatId changes
-  useEffect(() => {
-    if (chatId) {
-      loadChatById(chatId);
-    } else {
-      setMessages([]); // Clear messages for new chat
-    }
-  }, [chatId, loadChatById]);
-
-  // Fetch message history when the component mounts
-  useEffect(() => {
-    fetchMessageHistory();
-  }, []);
 
   return (
     <ChatContext.Provider

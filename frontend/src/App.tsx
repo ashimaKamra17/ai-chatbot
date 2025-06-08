@@ -5,61 +5,57 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { Login } from "./components/Login";
+import { Register } from "./components/Register";
 import Chat from "./pages/Chat";
-import { AppProvider } from "./context/AppProvider";
-import "./App.css";
 import Layout from "./components/Layout";
-import ChatPage from "./pages/ChatPage";
+import { AppProvider } from "./context/AppProvider";
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return user ? <>{children}</> : <Navigate to="/login" />;
+}
 
 const App: React.FC = () => {
-  const isAuthenticated = () => {
-    return !!localStorage.getItem("token");
-  };
-
   return (
     <Router>
-      <AppProvider>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Layout>
-                <ChatPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/chat"
-            element={
-              <Layout>
-                <ChatPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/chat/:chatId"
-            element={
-              <Layout>
-                <ChatPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/login"
-            element={!isAuthenticated() ? <Login /> : <Navigate to="/chat" />}
-          />
-          <Route
-            path="/signup"
-            element={!isAuthenticated() ? <Signup /> : <Navigate to="/chat" />}
-          />
-          <Route
-            path="/"
-            element={<Navigate to={isAuthenticated() ? "/chat" : "/login"} />}
-          />
-        </Routes>
-      </AppProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <Layout>
+                      <Chat />
+                    </Layout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <PrivateRoute>
+                    <Layout>
+                      <Chat />
+                    </Layout>
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
+          </AppProvider>{" "}
+        </ThemeProvider>
+      </AuthProvider>
     </Router>
   );
 };
